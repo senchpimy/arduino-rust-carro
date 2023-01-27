@@ -8,7 +8,6 @@ use panic_halt as _;
 
 const WAIT_BETWEEN_ACTIONS: u16 = 1000u16;
 const MINIMAL_DISTANCE: u16 = 10u16;
-const ACCEPTABLE_DISTANCE: u16 = 10u16;
 const TRIGGER_UP_TIME: u16 = 10u16;
 
 #[arduino_hal::entry]
@@ -23,37 +22,40 @@ fn main() -> ! {
     let left_back = pins.d5.into_output().downgrade();
     let right_forw = pins.d6.into_output().downgrade();
     let right_back = pins.d7.into_output().downgrade();
-    let mut trig = pins.d13.into_output();
-    let echo = pins.d12;
+    let echo = pins.d13;
+    let mut trig = pins.d12.into_output();
+    let mut wheels = [left_forw, left_back, right_forw, right_back];
+    let mut  distancia;
 
      loop{
-         let mut  distancia=0;
-        let mut delay = arduino_hal::Delay::new();
-        timer.tcnt1.write(|w| w.bits(0) );
-    
-        trig.set_high();
-        delay.delay_us(TRIGGER_UP_TIME);
-        trig.set_low();
-    
-        while echo.is_low() {
-            if timer.tcnt1.read().bits() >= 65000 {
-                distancia = 63500;
-            }
-        }
-    
-        // restarting the timer by writing 0 bits to it
-        timer.tcnt1.write(|w| w.bits(0) );
-    
-        // waiting for the echo to get low again
-        while echo.is_high() {}
-    
-        // Taking the time the echo was high, which is as long as the time the signal was out.
-        // 1 timer count == 4 us so * 4 to get a value in microsecs
-        // we divide by 58 to get the distance in cm, since (34000 cm/s * 1e-6 us time)/2 (back and forth measurement)
-        // == 0.017 more or less 1/58
-        let value = (timer.tcnt1.read().bits() * 4) / 58;
-    
-        let distancia = u16::from(value);
+                go_forward(&mut wheels);
+                let mut delay = arduino_hal::Delay::new();
+                timer.tcnt1.write(|w| w.bits(0) );
+            
+                trig.set_high();
+                delay.delay_us(TRIGGER_UP_TIME);
+                trig.set_low();
+            
+                while echo.is_low() {
+                    go_forward(&mut wheels);
+                    if timer.tcnt1.read().bits() >= 65000 {
+                    go_forward(&mut wheels);
+                    }
+                }
+            
+                timer.tcnt1.write(|w| w.bits(0) );
+            
+                while echo.is_high() {}
+            
+                let value = (timer.tcnt1.read().bits() * 4) / 58;
+            
+                distancia = u16::from(value);
+
+                 if distancia < MINIMAL_DISTANCE {
+                    stop(&mut wheels);
+                    turn_left(&mut wheels);
+                    arduino_hal::delay_ms(WAIT_BETWEEN_ACTIONS);
+                 }
      }
 }
 
