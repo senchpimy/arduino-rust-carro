@@ -1,6 +1,3 @@
-/*!
- * Blink the builtin LED - the "Hello World" of embedded programming.
- */
 #![no_std]
 #![no_main]
 
@@ -29,9 +26,9 @@ fn main() -> ! {
 
      loop{
                 go_forward(&mut wheels);
-                let mut delay = arduino_hal::Delay::new();
-                timer.tcnt1.write(|w| w.bits(0) );
             
+                let mut delay = arduino_hal::Delay::new();
+                //timer.tcnt1.write(|w| w.bits(0) );
                 trig.set_high();
                 delay.delay_us(TRIGGER_UP_TIME);
                 trig.set_low();
@@ -43,19 +40,19 @@ fn main() -> ! {
                     }
                 }
             
-                timer.tcnt1.write(|w| w.bits(0) );
+                //timer.tcnt1.write(|w| w.bits(0) );
             
-                while echo.is_high() {}
-            
-                let value = (timer.tcnt1.read().bits() * 4) / 58;
-            
-                distancia = u16::from(value);
+                if echo.is_high() {
+                    let value = (timer.tcnt1.read().bits() * 4) / 58;
+                    distancia = u16::from(value);
 
-                 if distancia < MINIMAL_DISTANCE {
-                    stop(&mut wheels);
-                    turn_left(&mut wheels);
-                    arduino_hal::delay_ms(WAIT_BETWEEN_ACTIONS);
-                 }
+                     if distancia < MINIMAL_DISTANCE {
+                        stop(&mut wheels);
+                        turn_left(&mut wheels);
+                        arduino_hal::delay_ms(WAIT_BETWEEN_ACTIONS);
+                     }
+                }
+            
      }
 }
 
