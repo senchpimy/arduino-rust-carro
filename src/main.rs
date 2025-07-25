@@ -22,47 +22,44 @@ fn main() -> ! {
     let echo = pins.d13;
     let mut trig = pins.d12.into_output();
     let mut wheels = [left_forw, left_back, right_forw, right_back];
-    let mut  distancia;
+    let mut distancia;
 
-     loop{
+    loop {
+        go_forward(&mut wheels);
+
+        let mut delay = arduino_hal::Delay::new();
+        //timer.tcnt1.write(|w| w.bits(0) );
+        trig.set_high();
+        delay.delay_us(TRIGGER_UP_TIME);
+        trig.set_low();
+
+        while echo.is_low() {
+            go_forward(&mut wheels);
+            if timer.tcnt1.read().bits() >= 65000 {
                 go_forward(&mut wheels);
-            
-                let mut delay = arduino_hal::Delay::new();
-                //timer.tcnt1.write(|w| w.bits(0) );
-                trig.set_high();
-                delay.delay_us(TRIGGER_UP_TIME);
-                trig.set_low();
-            
-                while echo.is_low() {
-                    go_forward(&mut wheels);
-                    if timer.tcnt1.read().bits() >= 65000 {
-                    go_forward(&mut wheels);
-                    }
-                }
-            
-                //timer.tcnt1.write(|w| w.bits(0) );
-            
-                if echo.is_high() {
-                    let value = (timer.tcnt1.read().bits() * 4) / 58;
-                    distancia = u16::from(value);
+            }
+        }
 
-                     if distancia < MINIMAL_DISTANCE {
-                        stop(&mut wheels);
-                        turn_left(&mut wheels);
-                        arduino_hal::delay_ms(WAIT_BETWEEN_ACTIONS);
-                     }
-                }
-            
-     }
+        //timer.tcnt1.write(|w| w.bits(0) );
+
+        if echo.is_high() {
+            let value = (timer.tcnt1.read().bits() * 4) / 58;
+            distancia = u16::from(value);
+
+            if distancia < MINIMAL_DISTANCE {
+                stop(&mut wheels);
+                turn_left(&mut wheels);
+                arduino_hal::delay_ms(WAIT_BETWEEN_ACTIONS);
+            }
+        }
+    }
 }
 
 use arduino_hal::prelude::*;
 const TURNING_TIME: u16 = 700u16;
 
 /// The mutable wheels array is destructured for easier manipulation.
-pub fn go_forward(
-    wheels: &mut [arduino_hal::port::Pin<arduino_hal::port::mode::Output>; 4],
-) {
+pub fn go_forward(wheels: &mut [arduino_hal::port::Pin<arduino_hal::port::mode::Output>; 4]) {
     // Be careful here with the order of unpacking. In my case, pin 4 is connected to left forward, 5 to left backwards, etc
     let [left_forw, left_back, right_forw, right_back] = wheels;
     left_forw.set_high();
